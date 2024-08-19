@@ -1,0 +1,120 @@
+from hub import light_matrix, button, sound
+import runloop
+import time
+import random
+class Pixel:
+    def __init__(self, x, y, brightness=100):
+        self.x = x
+        self.y = y
+        self.brightness = brightness
+        self.cycle_count = 0
+        self.cycles = 100
+
+    def show(self, x, y):
+        yy = self.y-1;
+        if (yy < 0):
+            yy = 0
+        for xx in range(5):
+            light_matrix.set_pixel(xx,yy,0)
+
+        light_matrix.set_pixel(self.x, self.y, self.brightness)
+
+    def update_position(self,Mycycles):
+        self.cycles=Mycycles
+        
+        self.cycle_count += 1
+        if self.cycle_count >= self.cycles:
+            self.y = (self.y + 1) % 5
+            self.cycle_count = 0
+
+
+pixel = Pixel(0, 0)
+
+async def main():
+
+    def ShowBG():
+        # show background wave:
+        for y in range(5):
+            time.sleep(0.01)
+            for x in range(5):
+                light_matrix.set_pixel(x,y,10*(5-y))
+        time.sleep(0.2)
+        for y in [4,3,2,1,0]:
+            time.sleep(0.01)
+            for x in range(5):
+                light_matrix.set_pixel(x,y,0)
+        time.sleep(0.02)
+
+    def ShowCountDown():
+        # count down 3:
+        light_matrix.show([0,100,100,100,0,0,0,0,100,0,0,100,100,100,0,0,0,0,100,0,0,100,100,100,0])
+        time.sleep(0.05)
+        # count down 2:
+        light_matrix.show([0,100,100,100,0,0,0,0,100,0,0,100,100,100,0,0,100,0,0,0,0,100,100,100,0])
+        time.sleep(0.05)
+        # count down 1:
+        light_matrix.show([0,0,100,0,0,0,100,100,0,0,0,0,100,0,0,0,0,100,0,0,0,0,100,0,0])
+        time.sleep(0.05)
+        light_matrix.clear()
+
+    def ShowPaddle(x):
+        for xx in range(5):
+            light_matrix.set_pixel(xx,4,0)
+        light_matrix.set_pixel(x,4,100)
+
+    def GameOver():
+        ShowBG()
+
+    await light_matrix.write("L")
+    ShowBG()
+    ShowCountDown()
+    delay = 100
+    vGameIsRunning = 1
+ 
+    vBallSpeed = 0.005
+    vPaddleX = 2
+    vBallX = random.randint(0,4)
+    vBallY = 0
+    cycle_count = 0
+    KeyCycles = 10
+    while (vGameIsRunning > 0):
+
+        pixel.update_position(delay)
+        pixel.show(vBallX, vBallY)
+        cycle_count += 1
+        if cycle_count >= KeyCycles:
+            cycle_count = 0
+            if ((button.pressed(button.LEFT)) and (vPaddleX > 0)):
+                vPaddleX = vPaddleX - 1
+            if ((button.pressed(button.RIGHT)) and (vPaddleX < 4)):
+                vPaddleX = vPaddleX + 1
+        time.sleep(vBallSpeed)
+
+        ShowPaddle(vPaddleX)
+     
+        
+        if (pixel.y > 3):
+            
+            if (pixel.x == vPaddleX ): # ball landed on paddle
+                sound.beep(880, 100, 100)
+                delay-=1
+                print(pixel.y, "catched")
+            
+            else: # did not catch a ball
+                sound.beep(440,100,100)
+                time.sleep(0.1)
+                sound.beep(330,100,100)
+                time.sleep(0.1)
+                sound.beep(220,100,100)
+                time.sleep(0.1)
+                
+                if (delay < 10):
+                 #   await GameOver()
+                    exit()
+            pixel.y = 0
+            pixel.x = random.randint(0,4)
+        else:
+            pass
+            #sound.beep(440, 100, 100)
+            #time.sleep(0.001)
+runloop.run(main())
